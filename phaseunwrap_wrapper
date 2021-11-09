@@ -1,0 +1,31 @@
+#! /usr/bin/env python
+
+import os
+import argparse
+import subprocess
+import nibabel as nib
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Wrapper for the phase_unwrap Docker image')
+    parser.add_argument('filename', type=str, help='Phase NIFTI image to be unwrapped')
+    parser.add_argument('-s', '--save-nii', action='store_true', default=False,
+                        help='Boolean flag that if set, resaves the .nii.gz file as .nii')
+    args = parser.parse_args()
+
+    filename = os.path.abspath(os.path.expanduser(args.filename))
+
+    head, tail = os.path.split(filename)
+    tail_noext = os.path.splitext(tail)[0]
+    tail_noext = tail.rsplit('.', 2)[0]
+
+    cmd = ['docker', 'run', '--rm', '-v', head + ':/data', 'blakedewey/phase_unwrap', '-p', tail, '-o', tail_noext]
+    subprocess.run(cmd)
+
+    if args.save_nii:
+        niigz_name = os.path.join(head,tail_noext + '_UNWRAPPED.nii.gz')
+
+        if os.path.isfile(niigz_name):
+            print('Deleting nii.gz file and replacing with nii file')
+            niigz_obj = nib.load(niigz_name)
+            niigz_obj.to_filename(os.path.join(head,tail_noext + '_UNWRAPPED.nii'))
+            os.remove(niigz_name)
